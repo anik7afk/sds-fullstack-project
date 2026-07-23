@@ -427,8 +427,13 @@ button {
 
 .field-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 16px;
+}
+
+.field:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .edit-actions {

@@ -11,11 +11,23 @@ const VIEWS = [
 const PRIORITIES = { 1: '1 · Urgent', 2: '2 · High', 3: '3 · Medium', 4: '4 · Low' };
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
+const nowTimeStr = () => new Date().toTimeString().slice(0, 5);
 
 function formatDate(iso) {
   if (!iso) return null;
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatDue(task) {
+  const date = formatDate(task.due_date);
+  return task.due_time ? `${date}, ${task.due_time}` : date;
+}
+
+function isOverdue(task) {
+  if (task.done || !task.due_date) return false;
+  if (task.due_date < todayStr()) return true;
+  return task.due_date === todayStr() && !!task.due_time && task.due_time < nowTimeStr();
 }
 
 function headingDate() {
@@ -86,6 +98,7 @@ export default function App() {
         title: editing.title,
         notes: editing.notes,
         due_date: editing.due_date || null,
+        due_time: editing.due_date ? editing.due_time || null : null,
         priority: Number(editing.priority),
       });
       setEditing(null);
@@ -223,16 +236,10 @@ export default function App() {
                         </span>
                         <span className="task-meta">
                           {task.due_date && (
-                            <span
-                              className={
-                                !task.done && task.due_date < todayStr()
-                                  ? 'meta overdue'
-                                  : 'meta'
-                              }
-                            >
-                              {!task.done && task.due_date < todayStr()
-                                ? `Overdue · was ${formatDate(task.due_date)}`
-                                : `Due ${formatDate(task.due_date)}`}
+                            <span className={isOverdue(task) ? 'meta overdue' : 'meta'}>
+                              {isOverdue(task)
+                                ? `Overdue · was ${formatDue(task)}`
+                                : `Due ${formatDue(task)}`}
                             </span>
                           )}
                           <span className="meta">{PRIORITIES[task.priority]}</span>
@@ -286,7 +293,26 @@ export default function App() {
                               className="field"
                               value={editing.due_date || ''}
                               onChange={(e) =>
-                                setEditing({ ...editing, due_date: e.target.value })
+                                setEditing({
+                                  ...editing,
+                                  due_date: e.target.value,
+                                  due_time: e.target.value ? editing.due_time : '',
+                                })
+                              }
+                            />
+                          </div>
+                          <div>
+                            <label className="field-label" htmlFor="edit-time">
+                              Time
+                            </label>
+                            <input
+                              id="edit-time"
+                              type="time"
+                              className="field"
+                              value={editing.due_time || ''}
+                              disabled={!editing.due_date}
+                              onChange={(e) =>
+                                setEditing({ ...editing, due_time: e.target.value })
                               }
                             />
                           </div>
