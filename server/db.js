@@ -13,4 +13,10 @@ db.exec(`CREATE TABLE IF NOT EXISTS tasks (
   created_at TEXT DEFAULT (date('now'))
 )`);
 
+// added later: optional time of day for the due date (HH:MM)
+const columns = db.prepare('PRAGMA table_info(tasks)').all();
+if (!columns.some((c) => c.name === 'due_time')) {
+  db.exec('ALTER TABLE tasks ADD COLUMN due_time TEXT');
+}
+
 module.exports = db;

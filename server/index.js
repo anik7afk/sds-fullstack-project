@@ -21,7 +21,7 @@ app.get('/api/tasks', (req, res) => {
   if (status === 'done') where.push('done = 1');
 
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
-  sql += " ORDER BY done ASC, due_date IS NULL, due_date ASC, priority ASC";
+  sql += " ORDER BY done ASC, due_date IS NULL, due_date ASC, due_time IS NULL, due_time ASC, priority ASC";
 
   res.json(db.prepare(sql).all(...params));
 });
@@ -35,13 +35,16 @@ app.get('/api/tasks/:id', (req, res) => {
 
 // CREATE
 app.post('/api/tasks', (req, res) => {
-  const { title, notes, due_date, priority } = req.body;
+  const { title, notes, due_date, due_time, priority } = req.body;
   if (!title || !title.trim()) {
     return res.status(400).json({ error: 'title is required' });
   }
+  if (due_time && !due_date) {
+    return res.status(400).json({ error: 'a due time needs a due date' });
+  }
   const info = db
-    .prepare('INSERT INTO tasks (title, notes, due_date, priority) VALUES (?, ?, ?, ?)')
-    .run(title.trim(), notes || '', due_date || null, priority || 4);
+    .prepare('INSERT INTO tasks (title, notes, due_date, due_time, priority) VALUES (?, ?, ?, ?, ?)')
+    .run(title.trim(), notes || '', due_date || null, due_time || null, priority || 4);
   const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(task);
 });
@@ -51,17 +54,22 @@ app.put('/api/tasks/:id', (req, res) => {
   const existing = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'task not found' });
 
-  const { title, notes, due_date, priority, done } = req.body;
+  const { title, notes, due_date, due_time, priority, done } = req.body;
   if (title !== undefined && !title.trim()) {
     return res.status(400).json({ error: 'title cannot be empty' });
   }
 
+  const nextDate = due_date !== undefined ? due_date : existing.due_date;
+  let nextTime = due_time !== undefined ? due_time : existing.due_time;
+  if (!nextDate) nextTime = null; // a time without a date makes no sense
+
   db.prepare(
-    'UPDATE tasks SET title = ?, notes = ?, due_date = ?, priority = ?, done = ? WHERE id = ?'
+    'UPDATE tasks SET title = ?, notes = ?, due_date = ?, due_time = ?, priority = ?, done = ? WHERE id = ?'
   ).run(
     title !== undefined ? title.trim() : existing.title,
     notes !== undefined ? notes : existing.notes,
-    due_date !== undefined ? due_date : existing.due_date,
+    nextDate,
+    nextTime,
     priority !== undefined ? priority : existing.priority,
     done !== undefined ? (done ? 1 : 0) : existing.done,
     req.params.id
