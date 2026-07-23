@@ -1,0 +1,14 @@
+{
+  "name": "stack-server",
+  "version": "1.0.0",
+  "description": "Express + SQLite backend for Stack",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  }
+}
