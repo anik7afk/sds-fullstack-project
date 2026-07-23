@@ -4,3 +4,5 @@ node_modules/
 client/dist/
 .DS_Store
 .env
+*.db-shm
+*.db-wal
