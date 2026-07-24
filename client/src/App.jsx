@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import * as api from './api.js';
+import Calendar from './Calendar.jsx';
 
 const VIEWS = [
   { key: 'all', label: 'All Tasks' },
   { key: 'today', label: 'Today' },
+  { key: 'calendar', label: 'Calendar' },
   { key: 'open', label: 'Open' },
   { key: 'done', label: 'Done' },
 ];
@@ -40,6 +42,7 @@ function headingDate() {
 
 function matchesView(task, view) {
   if (view === 'today') return task.due_date === todayStr();
+  if (view === 'calendar') return !!task.due_date;
   if (view === 'open') return !task.done;
   if (view === 'done') return !!task.done;
   return true;
@@ -49,6 +52,7 @@ export default function App() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('all');
+  const [selectedDay, setSelectedDay] = useState(todayStr());
   const [search, setSearch] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [editing, setEditing] = useState(null); // task being edited
@@ -74,7 +78,10 @@ export default function App() {
     e.preventDefault();
     if (!newTitle.trim()) return;
     try {
-      await api.createTask({ title: newTitle });
+      await api.createTask({
+        title: newTitle,
+        due_date: view === 'calendar' ? selectedDay : undefined,
+      });
       setNewTitle('');
       load();
     } catch (e) {
@@ -126,8 +133,17 @@ export default function App() {
   const openTasks = visible.filter((t) => !t.done);
   const doneTasks = visible.filter((t) => t.done);
 
+  const dayTasks = tasks.filter((t) => t.due_date === selectedDay);
+
   const groups =
-    view === 'done'
+    view === 'calendar'
+      ? [
+          {
+            label: `${formatDate(selectedDay)} · ${dayTasks.length}`,
+            items: dayTasks,
+          },
+        ]
+      : view === 'done'
       ? [{ label: `Done · ${doneTasks.length}`, items: doneTasks }]
       : view === 'open'
         ? [{ label: `Open · ${openTasks.length}`, items: openTasks }]
@@ -174,12 +190,25 @@ export default function App() {
         </header>
         <hr className="rule" />
 
+        {view === 'calendar' && (
+          <Calendar
+            tasks={tasks}
+            selected={selectedDay}
+            onSelect={setSelectedDay}
+            todayIso={todayStr()}
+          />
+        )}
+
         <form className="add-row" onSubmit={addTask}>
           <input
             className="field add-input"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="Add a task…"
+            placeholder={
+              view === 'calendar'
+                ? `Add a task for ${formatDate(selectedDay)}…`
+                : 'Add a task…'
+            }
             aria-label="New task title"
           />
           <button className="btn-dark" type="submit" disabled={!newTitle.trim()}>
@@ -209,7 +238,11 @@ export default function App() {
               <ul className="task-list">
                 {group.items.length === 0 && (
                   <li className="empty">
-                    {search ? 'No tasks match your search.' : 'Nothing here yet — add a task above.'}
+                    {search
+                      ? 'No tasks match your search.'
+                      : view === 'calendar'
+                        ? 'Nothing due this day — add a task above.'
+                        : 'Nothing here yet — add a task above.'}
                   </li>
                 )}
                 {group.items.map((task) => (
