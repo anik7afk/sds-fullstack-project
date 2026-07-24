@@ -2,6 +2,13 @@ const Database = require('better-sqlite3');
 
 const db = new Database('stack.db');
 db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
+
+db.exec(`CREATE TABLE IF NOT EXISTS projects (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  created_at TEXT DEFAULT (date('now'))
+)`);
 
 db.exec(`CREATE TABLE IF NOT EXISTS tasks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,6 +24,11 @@ db.exec(`CREATE TABLE IF NOT EXISTS tasks (
 const columns = db.prepare('PRAGMA table_info(tasks)').all();
 if (!columns.some((c) => c.name === 'due_time')) {
   db.exec('ALTER TABLE tasks ADD COLUMN due_time TEXT');
+}
+
+// added later: a task can belong to a project (null = no project)
+if (!columns.some((c) => c.name === 'project_id')) {
+  db.exec('ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)');
 }
 
 module.exports = db;
