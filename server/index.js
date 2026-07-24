@@ -49,7 +49,11 @@ app.delete('/api/projects/:id', (req, res) => {
 // READ all tasks, with optional search and status filter
 app.get('/api/tasks', (req, res) => {
   const { search, status, project_id } = req.query;
-  let sql = 'SELECT * FROM tasks';
+  // the counts come along so the list can show checklist progress in one request
+  let sql = `SELECT tasks.*,
+    (SELECT COUNT(*) FROM subtasks WHERE subtasks.task_id = tasks.id) AS subtask_count,
+    (SELECT COUNT(*) FROM subtasks WHERE subtasks.task_id = tasks.id AND subtasks.done = 1) AS subtask_done
+    FROM tasks`;
   const where = [];
   const params = [];
 
@@ -140,6 +144,48 @@ app.put('/api/tasks/:id', (req, res) => {
     req.params.id
   );
   res.json(db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id));
+});
+
+// ---------- Subtasks ----------
+
+app.get('/api/tasks/:id/subtasks', (req, res) => {
+  res.json(db.prepare('SELECT * FROM subtasks WHERE task_id = ? ORDER BY id').all(req.params.id));
+});
+
+app.post('/api/tasks/:id/subtasks', (req, res) => {
+  const task = db.prepare('SELECT id FROM tasks WHERE id = ?').get(req.params.id);
+  if (!task) return res.status(404).json({ error: 'task not found' });
+
+  const { title } = req.body;
+  if (!title || !title.trim()) {
+    return res.status(400).json({ error: 'title is required' });
+  }
+  const info = db
+    .prepare('INSERT INTO subtasks (task_id, title) VALUES (?, ?)')
+    .run(req.params.id, title.trim());
+  res.status(201).json(db.prepare('SELECT * FROM subtasks WHERE id = ?').get(info.lastInsertRowid));
+});
+
+app.put('/api/subtasks/:id', (req, res) => {
+  const existing = db.prepare('SELECT * FROM subtasks WHERE id = ?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'subtask not found' });
+
+  const { title, done } = req.body;
+  if (title !== undefined && !title.trim()) {
+    return res.status(400).json({ error: 'title cannot be empty' });
+  }
+  db.prepare('UPDATE subtasks SET title = ?, done = ? WHERE id = ?').run(
+    title !== undefined ? title.trim() : existing.title,
+    done !== undefined ? (done ? 1 : 0) : existing.done,
+    req.params.id
+  );
+  res.json(db.prepare('SELECT * FROM subtasks WHERE id = ?').get(req.params.id));
+});
+
+app.delete('/api/subtasks/:id', (req, res) => {
+  const info = db.prepare('DELETE FROM subtasks WHERE id = ?').run(req.params.id);
+  if (!info.changes) return res.status(404).json({ error: 'subtask not found' });
+  res.status(204).end();
 });
 
 // DELETE
