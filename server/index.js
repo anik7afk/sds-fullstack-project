@@ -6,6 +6,46 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ---------- Projects ----------
+
+app.get('/api/projects', (req, res) => {
+  res.json(db.prepare('SELECT * FROM projects ORDER BY name COLLATE NOCASE').all());
+});
+
+app.post('/api/projects', (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'name is required' });
+  }
+  const info = db.prepare('INSERT INTO projects (name) VALUES (?)').run(name.trim());
+  res.status(201).json(db.prepare('SELECT * FROM projects WHERE id = ?').get(info.lastInsertRowid));
+});
+
+app.put('/api/projects/:id', (req, res) => {
+  const { name } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'name is required' });
+  }
+  const info = db
+    .prepare('UPDATE projects SET name = ? WHERE id = ?')
+    .run(name.trim(), req.params.id);
+  if (!info.changes) return res.status(404).json({ error: 'project not found' });
+  res.json(db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id));
+});
+
+// deleting a project keeps its tasks, they just go back to having no project
+app.delete('/api/projects/:id', (req, res) => {
+  const remove = db.transaction((id) => {
+    db.prepare('UPDATE tasks SET project_id = NULL WHERE project_id = ?').run(id);
+    return db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+  });
+  const info = remove(req.params.id);
+  if (!info.changes) return res.status(404).json({ error: 'project not found' });
+  res.status(204).end();
+});
+
+// ---------- Tasks ----------
+
 // READ all tasks, with optional search and status filter
 app.get('/api/tasks', (req, res) => {
   const { search, status } = req.query;
