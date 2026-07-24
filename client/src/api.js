@@ -1,4 +1,5 @@
 const BASE = '/api/tasks';
+const PROJECTS = '/api/projects';
 
 async function request(url, options) {
   const res = await fetch(url, options);
@@ -35,4 +36,20 @@ export function updateTask(id, data) {
 
 export function deleteTask(id) {
   return request(`${BASE}/${id}`, { method: 'DELETE' });
+}
+
+export function getProjects() {
+  return request(PROJECTS);
+}
+
+export function createProject(name) {
+  return request(PROJECTS, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function deleteProject(id) {
+  return request(`${PROJECTS}/${id}`, { method: 'DELETE' });
 }
