@@ -16,6 +16,8 @@ const UPCOMING_DAYS = 7;
 
 const PRIORITIES = { 1: '1 · Urgent', 2: '2 · High', 3: '3 · Medium', 4: '4 · Low' };
 
+const REPEATS = { daily: 'Every day', weekly: 'Every week', monthly: 'Every month' };
+
 // build YYYY-MM-DD from local time; toISOString would give the UTC date,
 // which is a day off in the evening/early morning
 const todayStr = () => {
@@ -190,6 +192,7 @@ export default function App() {
         due_time: editing.due_date ? editing.due_time || null : null,
         priority: Number(editing.priority),
         project_id: editing.project_id ? Number(editing.project_id) : null,
+        repeats: editing.due_date ? editing.repeats || null : null,
       });
       setEditing(null);
       load();
@@ -459,6 +462,9 @@ export default function App() {
                             <span className="meta tag">{projectName(task.project_id)}</span>
                           )}
                           <span className="meta">{PRIORITIES[task.priority]}</span>
+                          {task.repeats && (
+                            <span className="meta">{REPEATS[task.repeats]}</span>
+                          )}
                           {task.subtask_count > 0 && (
                             <span className="meta">
                               {task.subtask_done}/{task.subtask_count} steps
@@ -545,6 +551,7 @@ export default function App() {
                                   ...editing,
                                   due_date: e.target.value,
                                   due_time: e.target.value ? editing.due_time : '',
+                                  repeats: e.target.value ? editing.repeats : '',
                                 })
                               }
                             />
@@ -596,6 +603,25 @@ export default function App() {
                               <option value="">No project</option>
                               {projects.map((p) => (
                                 <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="field-label" htmlFor="edit-repeats">
+                              Repeat
+                            </label>
+                            <select
+                              id="edit-repeats"
+                              className="field"
+                              value={editing.repeats || ''}
+                              disabled={!editing.due_date}
+                              onChange={(e) =>
+                                setEditing({ ...editing, repeats: e.target.value })
+                              }
+                            >
+                              <option value="">Never</option>
+                              {Object.entries(REPEATS).map(([val, label]) => (
+                                <option key={val} value={val}>{label}</option>
                               ))}
                             </select>
                           </div>
