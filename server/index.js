@@ -48,7 +48,7 @@ app.delete('/api/projects/:id', (req, res) => {
 
 // READ all tasks, with optional search and status filter
 app.get('/api/tasks', (req, res) => {
-  const { search, status } = req.query;
+  const { search, status, project_id } = req.query;
   let sql = 'SELECT * FROM tasks';
   const where = [];
   const params = [];
@@ -59,6 +59,12 @@ app.get('/api/tasks', (req, res) => {
   }
   if (status === 'open') where.push('done = 0');
   if (status === 'done') where.push('done = 1');
+  if (project_id === 'none') {
+    where.push('project_id IS NULL');
+  } else if (project_id) {
+    where.push('project_id = ?');
+    params.push(project_id);
+  }
 
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
   sql += " ORDER BY done ASC, due_date IS NULL, due_date ASC, due_time IS NULL, due_time ASC, priority ASC";
@@ -73,18 +79,33 @@ app.get('/api/tasks/:id', (req, res) => {
   res.json(task);
 });
 
+const projectExists = (id) =>
+  !!db.prepare('SELECT id FROM projects WHERE id = ?').get(id);
+
 // CREATE
 app.post('/api/tasks', (req, res) => {
-  const { title, notes, due_date, due_time, priority } = req.body;
+  const { title, notes, due_date, due_time, priority, project_id } = req.body;
   if (!title || !title.trim()) {
     return res.status(400).json({ error: 'title is required' });
   }
   if (due_time && !due_date) {
     return res.status(400).json({ error: 'a due time needs a due date' });
   }
+  if (project_id && !projectExists(project_id)) {
+    return res.status(400).json({ error: 'project not found' });
+  }
   const info = db
-    .prepare('INSERT INTO tasks (title, notes, due_date, due_time, priority) VALUES (?, ?, ?, ?, ?)')
-    .run(title.trim(), notes || '', due_date || null, due_time || null, priority || 4);
+    .prepare(
+      'INSERT INTO tasks (title, notes, due_date, due_time, priority, project_id) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+    .run(
+      title.trim(),
+      notes || '',
+      due_date || null,
+      due_time || null,
+      priority || 4,
+      project_id || null
+    );
   const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(task);
 });
@@ -94,9 +115,12 @@ app.put('/api/tasks/:id', (req, res) => {
   const existing = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'task not found' });
 
-  const { title, notes, due_date, due_time, priority, done } = req.body;
+  const { title, notes, due_date, due_time, priority, done, project_id } = req.body;
   if (title !== undefined && !title.trim()) {
     return res.status(400).json({ error: 'title cannot be empty' });
+  }
+  if (project_id && !projectExists(project_id)) {
+    return res.status(400).json({ error: 'project not found' });
   }
 
   const nextDate = due_date !== undefined ? due_date : existing.due_date;
@@ -104,7 +128,7 @@ app.put('/api/tasks/:id', (req, res) => {
   if (!nextDate) nextTime = null; // a time without a date makes no sense
 
   db.prepare(
-    'UPDATE tasks SET title = ?, notes = ?, due_date = ?, due_time = ?, priority = ?, done = ? WHERE id = ?'
+    'UPDATE tasks SET title = ?, notes = ?, due_date = ?, due_time = ?, priority = ?, done = ?, project_id = ? WHERE id = ?'
   ).run(
     title !== undefined ? title.trim() : existing.title,
     notes !== undefined ? notes : existing.notes,
@@ -112,6 +136,7 @@ app.put('/api/tasks/:id', (req, res) => {
     nextTime,
     priority !== undefined ? priority : existing.priority,
     done !== undefined ? (done ? 1 : 0) : existing.done,
+    project_id !== undefined ? project_id || null : existing.project_id,
     req.params.id
   );
   res.json(db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id));
