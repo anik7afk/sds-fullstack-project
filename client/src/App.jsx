@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as api from './api.js';
 import Calendar from './Calendar.jsx';
+import Subtasks from './Subtasks.jsx';
 
 const VIEWS = [
   { key: 'all', label: 'All Tasks' },
@@ -458,6 +459,11 @@ export default function App() {
                             <span className="meta tag">{projectName(task.project_id)}</span>
                           )}
                           <span className="meta">{PRIORITIES[task.priority]}</span>
+                          {task.subtask_count > 0 && (
+                            <span className="meta">
+                              {task.subtask_done}/{task.subtask_count} steps
+                            </span>
+                          )}
                           {task.notes && <span className="meta">Details</span>}
                         </span>
                       </button>
@@ -477,6 +483,7 @@ export default function App() {
                         ) : (
                           <p className="detail-notes muted">No details yet.</p>
                         )}
+                        <Subtasks taskId={task.id} onChange={load} />
                         <div className="edit-actions">
                           <button
                             className="btn-plain"

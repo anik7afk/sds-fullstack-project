@@ -501,6 +501,83 @@ button {
   font-style: italic;
 }
 
+/* ---------- Checklist ---------- */
+
+.subtasks {
+  margin-top: 16px;
+}
+
+.subtask-head {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.subtask-list {
+  list-style: none;
+}
+
+.subtask {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.check.small {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+.check.small:checked::before {
+  width: 9px;
+  height: 9px;
+}
+
+.subtask-title {
+  flex: 1;
+  font-size: 14px;
+}
+
+.subtask-title.done {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.subtask .btn-delete {
+  opacity: 0;
+}
+
+.subtask:hover .btn-delete,
+.subtask:focus-within .btn-delete {
+  opacity: 1;
+}
+
+.subtask-input {
+  width: 100%;
+  padding: 4px 0;
+  margin-top: 4px;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink-1);
+}
+
+.subtask-input::placeholder {
+  color: var(--muted);
+}
+
+.subtask-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
 /* ---------- Edit panel ---------- */
 
 .edit-panel {
