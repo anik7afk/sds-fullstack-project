@@ -5,10 +5,13 @@ import Calendar from './Calendar.jsx';
 const VIEWS = [
   { key: 'all', label: 'All Tasks' },
   { key: 'today', label: 'Today' },
+  { key: 'upcoming', label: 'Upcoming' },
   { key: 'calendar', label: 'Calendar' },
   { key: 'open', label: 'Open' },
   { key: 'done', label: 'Done' },
 ];
+
+const UPCOMING_DAYS = 7;
 
 const PRIORITIES = { 1: '1 · Urgent', 2: '2 · High', 3: '3 · Medium', 4: '4 · Low' };
 
@@ -21,6 +24,15 @@ const todayStr = () => {
   return `${d.getFullYear()}-${m}-${day}`;
 };
 const nowTimeStr = () => new Date().toTimeString().slice(0, 5);
+
+// iso date n days after the given one, going through Date so month ends work
+function addDays(iso, n) {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
 
 function formatDate(iso) {
   if (!iso) return null;
@@ -39,6 +51,16 @@ function isOverdue(task) {
   return task.due_date === todayStr() && !!task.due_time && task.due_time < nowTimeStr();
 }
 
+function dayLabel(iso, offset) {
+  if (offset === 0) return 'Today';
+  if (offset === 1) return 'Tomorrow';
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 function headingDate() {
   return new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -49,6 +71,7 @@ function headingDate() {
 
 function matchesView(task, view) {
   if (view === 'today') return task.due_date === todayStr();
+  if (view === 'upcoming') return !task.done && !!task.due_date;
   if (view === 'calendar') return !!task.due_date;
   if (view === 'open') return !task.done;
   if (view === 'done') return !!task.done;
@@ -149,8 +172,35 @@ export default function App() {
 
   const dayTasks = tasks.filter((t) => t.due_date === selectedDay);
 
+  // one section per day for the coming week, plus overdue on top and
+  // everything further out at the bottom
+  function upcomingGroups() {
+    const today = todayStr();
+    const scheduled = tasks.filter((t) => !t.done && t.due_date);
+    const out = [];
+
+    const overdue = scheduled.filter(isOverdue);
+    if (overdue.length) out.push({ label: `Overdue · ${overdue.length}`, items: overdue });
+
+    for (let i = 0; i < UPCOMING_DAYS; i++) {
+      const day = addDays(today, i);
+      const items = scheduled.filter((t) => t.due_date === day && !isOverdue(t));
+      // quiet days are skipped so the list does not turn into empty headings
+      if (!items.length && i > 0) continue;
+      out.push({ label: `${dayLabel(day, i)} · ${items.length}`, items });
+    }
+
+    const lastDay = addDays(today, UPCOMING_DAYS - 1);
+    const later = scheduled.filter((t) => t.due_date > lastDay);
+    if (later.length) out.push({ label: `Later · ${later.length}`, items: later });
+
+    return out;
+  }
+
   const groups =
-    view === 'calendar'
+    view === 'upcoming'
+      ? upcomingGroups()
+      : view === 'calendar'
       ? [
           {
             label: `${formatDate(selectedDay)} · ${dayTasks.length}`,
@@ -275,7 +325,9 @@ export default function App() {
                       ? 'No tasks match your search.'
                       : view === 'calendar'
                         ? 'Nothing due this day — add a task above.'
-                        : 'Nothing here yet — add a task above.'}
+                        : view === 'upcoming'
+                          ? 'Nothing due today.'
+                          : 'Nothing here yet — add a task above.'}
                   </li>
                 )}
                 {group.items.map((task) => (
