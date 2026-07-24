@@ -416,6 +416,25 @@ button {
   margin-bottom: 16px;
 }
 
+/* ---------- Detail panel ---------- */
+
+.detail-panel {
+  margin: 4px 8px 16px 42px;
+  padding: 16px;
+  background: var(--bg-raised);
+  border-radius: 12px;
+}
+
+.detail-notes {
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+
+.detail-notes.muted {
+  color: var(--muted);
+  font-style: italic;
+}
+
 /* ---------- Edit panel ---------- */
 
 .edit-panel {

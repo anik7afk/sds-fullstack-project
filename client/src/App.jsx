@@ -64,6 +64,7 @@ export default function App() {
   const [newTitle, setNewTitle] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [showNewNotes, setShowNewNotes] = useState(false);
+  const [expandedId, setExpandedId] = useState(null); // task showing its details
   const [editing, setEditing] = useState(null); // task being edited
   const [error, setError] = useState('');
 
@@ -131,6 +132,7 @@ export default function App() {
     try {
       await api.deleteTask(id);
       if (editing && editing.id === id) setEditing(null);
+      if (expandedId === id) setExpandedId(null);
       load();
     } catch (e) {
       setError(e.message);
@@ -289,11 +291,10 @@ export default function App() {
                       <button
                         type="button"
                         className="task-main"
-                        onClick={() =>
-                          setEditing(
-                            editing && editing.id === task.id ? null : { ...task }
-                          )
-                        }
+                        onClick={() => {
+                          setExpandedId(expandedId === task.id ? null : task.id);
+                          setEditing(null);
+                        }}
                       >
                         <span className={task.done ? 'task-title done' : 'task-title'}>
                           {task.title}
@@ -307,7 +308,7 @@ export default function App() {
                             </span>
                           )}
                           <span className="meta">{PRIORITIES[task.priority]}</span>
-                          {task.notes && <span className="meta">Notes</span>}
+                          {task.notes && <span className="meta">Details</span>}
                         </span>
                       </button>
                       <button
@@ -318,6 +319,32 @@ export default function App() {
                         ✕
                       </button>
                     </div>
+
+                    {expandedId === task.id && !(editing && editing.id === task.id) && (
+                      <div className="detail-panel">
+                        {task.notes ? (
+                          <p className="detail-notes">{task.notes}</p>
+                        ) : (
+                          <p className="detail-notes muted">No details yet.</p>
+                        )}
+                        <div className="edit-actions">
+                          <button
+                            className="btn-plain"
+                            type="button"
+                            onClick={() => setEditing({ ...task })}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn-plain"
+                            type="button"
+                            onClick={() => setExpandedId(null)}
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {editing && editing.id === task.id && (
                       <form className="edit-panel" onSubmit={saveEdit}>
@@ -334,7 +361,7 @@ export default function App() {
                         />
 
                         <label className="field-label" htmlFor="edit-notes">
-                          Notes
+                          Details
                         </label>
                         <textarea
                           id="edit-notes"
