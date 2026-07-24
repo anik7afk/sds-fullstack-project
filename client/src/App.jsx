@@ -18,6 +18,9 @@ const PRIORITIES = { 1: '1 · Urgent', 2: '2 · High', 3: '3 · Medium', 4: '4 �
 
 const REPEATS = { daily: 'Every day', weekly: 'Every week', monthly: 'Every month' };
 
+// only the two top ones are worth shouting about on the row
+const FLAGGED = { 1: 'Urgent', 2: 'High' };
+
 // build YYYY-MM-DD from local time; toISOString would give the UTC date,
 // which is a day off in the evening/early morning
 const todayStr = () => {
@@ -451,17 +454,25 @@ export default function App() {
                           {task.title}
                         </span>
                         <span className="task-meta">
-                          {task.due_date && (
+                          {task.due_date && !(view === 'upcoming' && !isOverdue(task)) && (
                             <span className={isOverdue(task) ? 'meta overdue' : 'meta'}>
                               {isOverdue(task)
                                 ? `Overdue · was ${formatDue(task)}`
                                 : `Due ${formatDue(task)}`}
                             </span>
                           )}
+                          {/* under a day heading only the time is news */}
+                          {view === 'upcoming' && !isOverdue(task) && task.due_time && (
+                            <span className="meta">{task.due_time}</span>
+                          )}
                           {task.project_id && view !== 'project' && (
                             <span className="meta tag">{projectName(task.project_id)}</span>
                           )}
-                          <span className="meta">{PRIORITIES[task.priority]}</span>
+                          {FLAGGED[task.priority] && !task.done && (
+                            <span className={`meta prio p${task.priority}`}>
+                              {FLAGGED[task.priority]}
+                            </span>
+                          )}
                           {task.repeats && (
                             <span className="meta">{REPEATS[task.repeats]}</span>
                           )}
