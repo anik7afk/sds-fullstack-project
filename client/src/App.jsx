@@ -12,7 +12,14 @@ const VIEWS = [
 
 const PRIORITIES = { 1: '1 · Urgent', 2: '2 · High', 3: '3 · Medium', 4: '4 · Low' };
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
+// build YYYY-MM-DD from local time; toISOString would give the UTC date,
+// which is a day off in the evening/early morning
+const todayStr = () => {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+};
 const nowTimeStr = () => new Date().toTimeString().slice(0, 5);
 
 function formatDate(iso) {
