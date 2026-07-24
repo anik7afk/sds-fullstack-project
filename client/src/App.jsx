@@ -338,12 +338,12 @@ export default function App() {
       <main className="content">
         <header className="page-head">
           <div>
-            <p className="eyebrow">
+            <p className="eyebrow">{headingDate()}</p>
+            <h2 className="day-heading">
               {view === 'project'
                 ? projectName(activeProject)
                 : VIEWS.find((v) => v.key === view).label}
-            </p>
-            <h2 className="day-heading">{headingDate()}</h2>
+            </h2>
           </div>
           <span className="head-note">
             {counts.open} open · {counts.done} done
