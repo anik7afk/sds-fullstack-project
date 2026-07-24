@@ -96,6 +96,9 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newNotes, setNewNotes] = useState('');
+  const [newDue, setNewDue] = useState('');
+  const [newTime, setNewTime] = useState('');
+  const [newPriority, setNewPriority] = useState('4');
   const [showNewNotes, setShowNewNotes] = useState(false);
   const [expandedId, setExpandedId] = useState(null); // task showing its details
   const [editing, setEditing] = useState(null); // task being edited
@@ -161,14 +164,21 @@ export default function App() {
     e.preventDefault();
     if (!newTitle.trim()) return;
     try {
+      // the calendar view already says which day you are adding to
+      const due = view === 'calendar' ? selectedDay : newDue || undefined;
       await api.createTask({
         title: newTitle,
         notes: newNotes,
-        due_date: view === 'calendar' ? selectedDay : undefined,
+        due_date: due,
+        due_time: due ? newTime || undefined : undefined,
+        priority: Number(newPriority),
         project_id: view === 'project' ? activeProject : undefined,
       });
       setNewTitle('');
       setNewNotes('');
+      setNewDue('');
+      setNewTime('');
+      setNewPriority('4');
       setShowNewNotes(false);
       load();
     } catch (e) {
@@ -390,14 +400,63 @@ export default function App() {
             </button>
           </div>
           {showNewNotes && (
-            <textarea
-              className="field add-details"
-              rows="3"
-              value={newNotes}
-              onChange={(e) => setNewNotes(e.target.value)}
-              placeholder="What actually needs to be done?"
-              aria-label="New task details"
-            />
+            <div className="add-more">
+              <textarea
+                className="field add-details"
+                rows="3"
+                value={newNotes}
+                onChange={(e) => setNewNotes(e.target.value)}
+                placeholder="What actually needs to be done?"
+                aria-label="New task details"
+              />
+              <div className="field-grid">
+                {view !== 'calendar' && (
+                  <div>
+                    <label className="field-label" htmlFor="new-due">
+                      Due date
+                    </label>
+                    <input
+                      id="new-due"
+                      type="date"
+                      className="field"
+                      value={newDue}
+                      onChange={(e) => {
+                        setNewDue(e.target.value);
+                        if (!e.target.value) setNewTime('');
+                      }}
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="field-label" htmlFor="new-time">
+                    Time
+                  </label>
+                  <input
+                    id="new-time"
+                    type="time"
+                    className="field"
+                    value={newTime}
+                    disabled={view !== 'calendar' && !newDue}
+                    onChange={(e) => setNewTime(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="new-priority">
+                    Priority
+                  </label>
+                  <select
+                    id="new-priority"
+                    className="field"
+                    value={newPriority}
+                    onChange={(e) => setNewPriority(e.target.value)}
+                  >
+                    {Object.entries(PRIORITIES).map(([val, label]) => (
+                      <option key={val} value={val}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
           )}
         </form>
 

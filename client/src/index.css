@@ -282,9 +282,19 @@ button {
   gap: 12px;
 }
 
-.add-details {
+.add-more {
   margin-top: 8px;
+  padding: 16px;
+  background: var(--bg-raised);
+  border-radius: 12px;
+}
+
+.add-details {
   resize: vertical;
+}
+
+.add-more .field-grid {
+  margin-top: 4px;
 }
 
 .btn-dark {
