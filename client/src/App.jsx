@@ -62,6 +62,8 @@ export default function App() {
   const [selectedDay, setSelectedDay] = useState(todayStr());
   const [search, setSearch] = useState('');
   const [newTitle, setNewTitle] = useState('');
+  const [newNotes, setNewNotes] = useState('');
+  const [showNewNotes, setShowNewNotes] = useState(false);
   const [editing, setEditing] = useState(null); // task being edited
   const [error, setError] = useState('');
 
@@ -87,9 +89,12 @@ export default function App() {
     try {
       await api.createTask({
         title: newTitle,
+        notes: newNotes,
         due_date: view === 'calendar' ? selectedDay : undefined,
       });
       setNewTitle('');
+      setNewNotes('');
+      setShowNewNotes(false);
       load();
     } catch (e) {
       setError(e.message);
@@ -206,21 +211,40 @@ export default function App() {
           />
         )}
 
-        <form className="add-row" onSubmit={addTask}>
-          <input
-            className="field add-input"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            placeholder={
-              view === 'calendar'
-                ? `Add a task for ${formatDate(selectedDay)}…`
-                : 'Add a task…'
-            }
-            aria-label="New task title"
-          />
-          <button className="btn-dark" type="submit" disabled={!newTitle.trim()}>
-            Add
-          </button>
+        <form className="add-box" onSubmit={addTask}>
+          <div className="add-row">
+            <input
+              className="field add-input"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder={
+                view === 'calendar'
+                  ? `Add a task for ${formatDate(selectedDay)}…`
+                  : 'Add a task…'
+              }
+              aria-label="New task title"
+            />
+            <button
+              className="btn-plain"
+              type="button"
+              onClick={() => setShowNewNotes(!showNewNotes)}
+            >
+              Details
+            </button>
+            <button className="btn-dark" type="submit" disabled={!newTitle.trim()}>
+              Add
+            </button>
+          </div>
+          {showNewNotes && (
+            <textarea
+              className="field add-details"
+              rows="3"
+              value={newNotes}
+              onChange={(e) => setNewNotes(e.target.value)}
+              placeholder="What actually needs to be done?"
+              aria-label="New task details"
+            />
+          )}
         </form>
 
         {error && <p className="error" role="alert">{error}</p>}

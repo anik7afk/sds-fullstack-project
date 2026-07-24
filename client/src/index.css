@@ -191,10 +191,19 @@ button {
   box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.25);
 }
 
+.add-box {
+  margin-bottom: 16px;
+}
+
 .add-row {
   display: flex;
+  align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+}
+
+.add-details {
+  margin-top: 8px;
+  resize: vertical;
 }
 
 .btn-dark {
