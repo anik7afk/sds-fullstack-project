@@ -843,7 +843,9 @@ button {
   .field-grid {
     grid-template-columns: 1fr;
   }
-  .btn-delete {
+  .btn-delete,
+  .nav-row .btn-delete,
+  .subtask .btn-delete {
     opacity: 1; /* no hover on touch */
   }
   .edit-panel {
