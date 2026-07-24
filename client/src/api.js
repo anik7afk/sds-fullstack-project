@@ -38,6 +38,30 @@ export function deleteTask(id) {
   return request(`${BASE}/${id}`, { method: 'DELETE' });
 }
 
+export function getSubtasks(taskId) {
+  return request(`${BASE}/${taskId}/subtasks`);
+}
+
+export function createSubtask(taskId, title) {
+  return request(`${BASE}/${taskId}/subtasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title }),
+  });
+}
+
+export function updateSubtask(id, data) {
+  return request(`/api/subtasks/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteSubtask(id) {
+  return request(`/api/subtasks/${id}`, { method: 'DELETE' });
+}
+
 export function getProjects() {
   return request(PROJECTS);
 }
