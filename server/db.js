@@ -20,6 +20,14 @@ db.exec(`CREATE TABLE IF NOT EXISTS tasks (
   created_at TEXT DEFAULT (date('now'))
 )`);
 
+// checklist items under a task, removed with it
+db.exec(`CREATE TABLE IF NOT EXISTS subtasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  done INTEGER DEFAULT 0
+)`);
+
 // added later: optional time of day for the due date (HH:MM)
 const columns = db.prepare('PRAGMA table_info(tasks)').all();
 if (!columns.some((c) => c.name === 'due_time')) {
