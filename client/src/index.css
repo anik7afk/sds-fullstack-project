@@ -115,6 +115,66 @@ button {
   font-weight: 400;
 }
 
+/* ---------- Projects in the sidebar ---------- */
+
+.side-section {
+  padding: 12px 12px 0;
+  margin-top: 8px;
+  border-top: 1px solid var(--hairline-soft);
+}
+
+.side-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 4px 12px 8px;
+}
+
+.nav-row {
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.nav-row .nav-item {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.project-input {
+  width: 100%;
+  padding: 8px 12px;
+  margin-top: 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink-1);
+}
+
+.project-input::placeholder {
+  color: var(--muted);
+}
+
+.project-input:focus {
+  outline: none;
+  background: var(--bg);
+  border-color: var(--accent);
+}
+
+.nav-row .btn-delete {
+  opacity: 0;
+}
+
+.nav-row:hover .btn-delete,
+.nav-row:focus-within .btn-delete {
+  opacity: 1;
+}
+
 .sidebar-foot {
   margin-top: auto;
   padding: 16px 24px;
@@ -378,6 +438,12 @@ button {
   color: var(--muted);
 }
 
+.meta.tag {
+  background: var(--bg-active);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+
 .meta.overdue {
   color: var(--danger);
   font-weight: 500;
@@ -459,7 +525,7 @@ button {
 
 .field-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 16px;
 }
 

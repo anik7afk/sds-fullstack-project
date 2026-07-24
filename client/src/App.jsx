@@ -69,7 +69,8 @@ function headingDate() {
   });
 }
 
-function matchesView(task, view) {
+function matchesView(task, view, projectId) {
+  if (view === 'project') return task.project_id === projectId;
   if (view === 'today') return task.due_date === todayStr();
   if (view === 'upcoming') return !task.done && !!task.due_date;
   if (view === 'calendar') return !!task.due_date;
@@ -80,8 +81,11 @@ function matchesView(task, view) {
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('all');
+  const [activeProject, setActiveProject] = useState(null); // id, when view is 'project'
+  const [newProject, setNewProject] = useState('');
   const [selectedDay, setSelectedDay] = useState(todayStr());
   const [search, setSearch] = useState('');
   const [newTitle, setNewTitle] = useState('');
@@ -103,9 +107,49 @@ export default function App() {
     }
   };
 
+  const loadProjects = async () => {
+    try {
+      setProjects(await api.getProjects());
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
   useEffect(() => {
     load();
   }, [search]);
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const addProject = async (e) => {
+    e.preventDefault();
+    if (!newProject.trim()) return;
+    try {
+      const project = await api.createProject(newProject.trim());
+      setNewProject('');
+      await loadProjects();
+      setView('project');
+      setActiveProject(project.id);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const removeProject = async (id) => {
+    try {
+      await api.deleteProject(id);
+      if (activeProject === id) {
+        setView('all');
+        setActiveProject(null);
+      }
+      await loadProjects();
+      load(); // the tasks kept their place, they just lost the project
+    } catch (e) {
+      setError(e.message);
+    }
+  };
 
   const addTask = async (e) => {
     e.preventDefault();
@@ -115,6 +159,7 @@ export default function App() {
         title: newTitle,
         notes: newNotes,
         due_date: view === 'calendar' ? selectedDay : undefined,
+        project_id: view === 'project' ? activeProject : undefined,
       });
       setNewTitle('');
       setNewNotes('');
@@ -143,6 +188,7 @@ export default function App() {
         due_date: editing.due_date || null,
         due_time: editing.due_date ? editing.due_time || null : null,
         priority: Number(editing.priority),
+        project_id: editing.project_id ? Number(editing.project_id) : null,
       });
       setEditing(null);
       load();
@@ -165,8 +211,10 @@ export default function App() {
   const counts = Object.fromEntries(
     VIEWS.map((v) => [v.key, tasks.filter((t) => matchesView(t, v.key)).length])
   );
+  const projectCount = (id) => tasks.filter((t) => t.project_id === id && !t.done).length;
+  const projectName = (id) => projects.find((p) => p.id === id)?.name;
 
-  const visible = tasks.filter((t) => matchesView(t, view));
+  const visible = tasks.filter((t) => matchesView(t, view, activeProject));
   const openTasks = visible.filter((t) => !t.done);
   const doneTasks = visible.filter((t) => t.done);
 
@@ -230,13 +278,54 @@ export default function App() {
             <button
               key={v.key}
               className={view === v.key ? 'nav-item active' : 'nav-item'}
-              onClick={() => setView(v.key)}
+              onClick={() => {
+                setView(v.key);
+                setActiveProject(null);
+              }}
             >
               {v.label}
               <span className="nav-count">{counts[v.key]}</span>
             </button>
           ))}
         </nav>
+
+        <div className="side-section">
+          <p className="side-label">Projects</p>
+          {projects.map((p) => (
+            <div key={p.id} className="nav-row">
+              <button
+                className={
+                  view === 'project' && activeProject === p.id
+                    ? 'nav-item active'
+                    : 'nav-item'
+                }
+                onClick={() => {
+                  setView('project');
+                  setActiveProject(p.id);
+                }}
+              >
+                {p.name}
+                <span className="nav-count">{projectCount(p.id)}</span>
+              </button>
+              <button
+                className="btn-delete"
+                onClick={() => removeProject(p.id)}
+                aria-label={`Delete project "${p.name}"`}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <form onSubmit={addProject}>
+            <input
+              className="project-input"
+              value={newProject}
+              onChange={(e) => setNewProject(e.target.value)}
+              placeholder="New project…"
+              aria-label="New project name"
+            />
+          </form>
+        </div>
         <div className="sidebar-foot">
           <span>Full-Stack 2025-26</span>
         </div>
@@ -245,7 +334,11 @@ export default function App() {
       <main className="content">
         <header className="page-head">
           <div>
-            <p className="eyebrow">{VIEWS.find((v) => v.key === view).label}</p>
+            <p className="eyebrow">
+              {view === 'project'
+                ? projectName(activeProject)
+                : VIEWS.find((v) => v.key === view).label}
+            </p>
             <h2 className="day-heading">{headingDate()}</h2>
           </div>
           <span className="head-note">
@@ -272,7 +365,9 @@ export default function App() {
               placeholder={
                 view === 'calendar'
                   ? `Add a task for ${formatDate(selectedDay)}…`
-                  : 'Add a task…'
+                  : view === 'project'
+                    ? `Add a task to ${projectName(activeProject)}…`
+                    : 'Add a task…'
               }
               aria-label="New task title"
             />
@@ -358,6 +453,9 @@ export default function App() {
                                 ? `Overdue · was ${formatDue(task)}`
                                 : `Due ${formatDue(task)}`}
                             </span>
+                          )}
+                          {task.project_id && view !== 'project' && (
+                            <span className="meta tag">{projectName(task.project_id)}</span>
                           )}
                           <span className="meta">{PRIORITIES[task.priority]}</span>
                           {task.notes && <span className="meta">Details</span>}
@@ -473,6 +571,24 @@ export default function App() {
                             >
                               {Object.entries(PRIORITIES).map(([val, label]) => (
                                 <option key={val} value={val}>{label}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="field-label" htmlFor="edit-project">
+                              Project
+                            </label>
+                            <select
+                              id="edit-project"
+                              className="field"
+                              value={editing.project_id || ''}
+                              onChange={(e) =>
+                                setEditing({ ...editing, project_id: e.target.value })
+                              }
+                            >
+                              <option value="">No project</option>
+                              {projects.map((p) => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
                               ))}
                             </select>
                           </div>
