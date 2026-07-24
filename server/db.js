@@ -34,6 +34,11 @@ if (!columns.some((c) => c.name === 'due_time')) {
   db.exec('ALTER TABLE tasks ADD COLUMN due_time TEXT');
 }
 
+// added later: daily / weekly / monthly repeat (null = one-off task)
+if (!columns.some((c) => c.name === 'repeats')) {
+  db.exec('ALTER TABLE tasks ADD COLUMN repeats TEXT');
+}
+
 // added later: a task can belong to a project (null = no project)
 if (!columns.some((c) => c.name === 'project_id')) {
   db.exec('ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)');
