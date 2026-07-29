@@ -104,9 +104,8 @@ which change did it instead of guessing.
 
 Wrapping up for submission. I recorded a video of the app running through the
 basics: adding a task, ticking it done, deleting one, reloading the page to
-show the tasks survive, and a look at the calendar and project views. Instead
-of uploading it somewhere I put the file straight in the repository and pointed
-VIDEO.md at it.
+show the tasks survive, and a look at the calendar and project views. The file went
+to Google Drive and VIDEO.md has the link.
 
 I also went back over the README. It had the run instructions and the endpoint
 table but nothing about how the pieces connect, so I added two diagrams with
