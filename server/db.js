@@ -1,47 +1,102 @@
-const Database = require('better-sqlite3');
+const mongoose = require('mongoose');
 
-const db = new Database('stack.db');
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const URI = 'mongodb://127.0.0.1:27017/stack';
 
-db.exec(`CREATE TABLE IF NOT EXISTS projects (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  created_at TEXT DEFAULT (date('now'))
-)`);
-
-db.exec(`CREATE TABLE IF NOT EXISTS tasks (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  notes TEXT DEFAULT '',
-  due_date TEXT,
-  priority INTEGER DEFAULT 4,
-  done INTEGER DEFAULT 0,
-  created_at TEXT DEFAULT (date('now'))
-)`);
-
-// checklist items under a task, removed with it
-db.exec(`CREATE TABLE IF NOT EXISTS subtasks (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  done INTEGER DEFAULT 0
-)`);
-
-// added later: optional time of day for the due date (HH:MM)
-const columns = db.prepare('PRAGMA table_info(tasks)').all();
-if (!columns.some((c) => c.name === 'due_time')) {
-  db.exec('ALTER TABLE tasks ADD COLUMN due_time TEXT');
+// build YYYY-MM-DD from local time; toISOString would give the UTC date,
+// which is a day off in the evening/early morning
+function today() {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
 }
 
-// added later: daily / weekly / monthly repeat (null = one-off task)
-if (!columns.some((c) => c.name === 'repeats')) {
-  db.exec('ALTER TABLE tasks ADD COLUMN repeats TEXT');
+// mongo has no AUTOINCREMENT, so ids come out of a tiny counters collection,
+// one document per collection. keeping them plain numbers means the ids from
+// the sqlite version still work and the client does not have to change.
+const counterSchema = new mongoose.Schema(
+  {
+    _id: String,
+    seq: { type: Number, default: 0 },
+  },
+  { versionKey: false }
+);
+
+const projectSchema = new mongoose.Schema(
+  {
+    _id: Number,
+    name: { type: String, required: true },
+    created_at: { type: String, default: today },
+  },
+  { versionKey: false }
+);
+
+const taskSchema = new mongoose.Schema(
+  {
+    _id: Number,
+    title: { type: String, required: true },
+    notes: { type: String, default: '' },
+    due_date: { type: String, default: null },
+    due_time: { type: String, default: null }, // optional time of day (HH:MM)
+    priority: { type: Number, default: 4 },
+    done: { type: Number, default: 0 }, // 0/1, same as the old sqlite column
+    repeats: { type: String, default: null }, // daily / weekly / monthly, null = one-off
+    project_id: { type: Number, default: null }, // null = no project
+    created_at: { type: String, default: today },
+  },
+  { versionKey: false }
+);
+
+// checklist items under a task. sqlite removed them with ON DELETE CASCADE,
+// mongo has no such thing so the delete route clears them by hand.
+const subtaskSchema = new mongoose.Schema(
+  {
+    _id: Number,
+    task_id: { type: Number, required: true },
+    title: { type: String, required: true },
+    done: { type: Number, default: 0 },
+  },
+  { versionKey: false }
+);
+
+const Counter = mongoose.model('Counter', counterSchema, 'counters');
+const Project = mongoose.model('Project', projectSchema, 'projects');
+const Task = mongoose.model('Task', taskSchema, 'tasks');
+const Subtask = mongoose.model('Subtask', subtaskSchema, 'subtasks');
+
+// the next free id for a collection
+async function nextId(name) {
+  const counter = await Counter.findByIdAndUpdate(
+    name,
+    { $inc: { seq: 1 } },
+    { upsert: true, returnDocument: 'after' }
+  );
+  return counter.seq;
 }
 
-// added later: a task can belong to a project (null = no project)
-if (!columns.some((c) => c.name === 'project_id')) {
-  db.exec('ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects(id)');
+// mongo calls the key _id, the API has always called it id
+function withId(doc) {
+  const { _id, ...rest } = doc;
+  return { id: _id, ...rest };
 }
 
-module.exports = db;
+// ids arrive from the URL as strings. anything that is not a number can never
+// match a document, and -1 is never handed out, so those requests fall through
+// to the usual 404 instead of blowing up on a cast error.
+function asId(value) {
+  return /^\d+$/.test(value) ? Number(value) : -1;
+}
+
+const connect = () => mongoose.connect(URI);
+
+module.exports = {
+  connect,
+  Counter,
+  Project,
+  Task,
+  Subtask,
+  nextId,
+  withId,
+  asId,
+  today,
+};
