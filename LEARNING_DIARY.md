@@ -111,7 +111,28 @@ I also went back over the README. It had the run instructions and the endpoint
 table but nothing about how the pieces connect, so I added two diagrams with
 Mermaid, which GitHub draws directly from a code block in the markdown: one of
 the request path from the browser through the Vite proxy to Express and the
-SQLite file, and one of the three database tables and how they reference each
+storage, and one of the three database tables and how they reference each
 other. Writing the database section made me state out loud a decision that was
 only implicit in the code: deleting a task removes its checklist through the
 cascade, but deleting a project deliberately keeps its tasks.
+
+The big job of the day: the course project is meant to be MERN, and my M was
+SQLite. So the storage moved to MongoDB with Mongoose. Because the client only
+ever talks to the API, the whole swap stayed inside `server/`: the three
+tables became three Mongoose models, the SQL became model calls, and every
+endpoint kept its URL and its JSON shape, so the React side needed no changes
+at all. I wrote a one-shot script that copies the existing rows over from the
+SQLite file, checked the new `/api/tasks` output against the old one field by
+field, and clicked through the app afterwards to be sure.
+
+Two things from the swap are worth writing down. First, ids. Mongo wants to
+give every document an ObjectId string, but my edit form runs its project
+choice through `Number(...)` before saving, and `Number` of an ObjectId is
+NaN, which would have quietly wiped the project off a task every time the form
+was saved. So the models hand out plain numbers from a little counters
+collection instead, and the old ids survived the move unchanged. Second, the
+subtask counts on each row: in SQL that was two subqueries, in Mongo it became
+a `$lookup` in an aggregation, which took the longest to get right of anything
+today. I also lost the SQLite transactions around the repeat logic, since a
+single plain mongod cannot do multi-document transactions. I decided to live
+with that and noted it instead of pretending it is not there.
