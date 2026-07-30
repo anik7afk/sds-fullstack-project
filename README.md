@@ -4,7 +4,7 @@
 **Course:** Software Development Skills: Full-Stack 2025-26, LUT University
 
 Stack is a task manager you run in the browser. React on the front, an Express
-API on the back, and a SQLite file for storage. There is a short video of it
+API on the back, and MongoDB for storage. There is a short video of it
 running, see `VIDEO.md`.
 
 ## What it does
@@ -21,24 +21,30 @@ running, see `VIDEO.md`.
 
 - Frontend: React (Vite)
 - Backend: Node.js + Express
-- Database: SQLite (better-sqlite3)
+- Database: MongoDB (Mongoose)
+
+So the MERN stack, with M last: the app started on SQLite and was moved to
+MongoDB at the end. Because the client only ever talks to the API, the swap
+stayed inside `server/` and no endpoint changed.
 
 ## How it fits together
 
 The React app never talks to the database. It calls `/api/...`, the Vite dev
 server forwards that to the Express server on port 3001, and Express is the
-only thing that touches the SQLite file.
+only thing that touches MongoDB.
 
 ```mermaid
 flowchart LR
   B[Browser<br>React app] -->|"/api requests"| V[Vite dev server<br>:5173]
   V -->|proxy| E[Express API<br>:3001]
-  E -->|better-sqlite3| D[(stack.db)]
+  E -->|mongoose| D[(MongoDB<br>stack)]
 ```
 
 ## How to run
 
-You need Node.js. Open two terminals.
+You need Node.js and a MongoDB server on `localhost:27017` (on a Mac,
+`brew install mongodb-community` and `brew services start mongodb-community`).
+Open two terminals.
 
 Backend:
 
@@ -57,13 +63,14 @@ npm run dev      # app on http://localhost:5173
 ```
 
 The client proxies `/api` to port 3001, so start the server first. The
-database file (`server/stack.db`) is created automatically on first start.
+database (`stack`) and its collections are created on first use, so there is
+nothing to set up beyond having MongoDB running.
 
 ## Database
 
-Three tables. A project has tasks, a task has checklist steps. Deleting a task
-removes its steps with it (cascade), but deleting a project keeps the tasks
-and just leaves them without a project.
+Three collections. A project has tasks, a task has checklist steps. Deleting a
+task removes its steps with it, but deleting a project keeps the tasks and
+just leaves them without a project.
 
 ```mermaid
 erDiagram
@@ -96,9 +103,10 @@ erDiagram
 ```
 
 `priority` is 1 (urgent) to 4 (low). `repeats` is `daily`, `weekly`,
-`monthly` or empty for a one-off task. The `due_time`, `repeats` and
-`project_id` columns were added along the way, so `db.js` checks for them and
-adds them to older database files if they are missing.
+`monthly` or empty for a one-off task. Ids are plain numbers handed out by a
+small counters collection instead of Mongo's ObjectId strings, so the client
+did not have to change when the storage did. `server/migrate-from-sqlite.js`
+is the one-shot script that copied the data over from the old SQLite file.
 
 ## API
 
@@ -125,6 +133,6 @@ checklist copied over unticked.
 ## What is where
 
 - `client/` is the React frontend
-- `server/` is the Express API and the SQLite database
+- `server/` is the Express API and the Mongoose models
 - `LEARNING_DIARY.md` is the dated learning diary
 - `VIDEO.md` has the link to a video of the app running
